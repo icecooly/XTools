@@ -68,7 +68,30 @@ class XClient:
         self.child.interact()
         return self.child
 
-    def run(self,command):
+    def run(self,command, expect):
+        logInfo('run %s' % command)
+        self.child = pexpect.spawn(command,timeout=None)
+        self.child.logfile=sys.stdout.buffer
+        ret = self.child.expect([pexpect.TIMEOUT, 'Are you sure you want to continue connecting', '[p]assword:'])
+        if ret == 0:
+            logError('[-] Error Connecting')
+            return
+        if ret == 1:
+            self.child.sendline('yes')
+            ret = self.child.expect([pexpect.TIMEOUT, '[p|P]assword'])
+            if ret == 0:
+                logError('[-] Error Connecting')
+                return
+            if ret == 1:
+                self.sendCommand(self.child, self.host.password, expect)
+                self.child.interact()
+                return
+        if ret == 2:
+            self.sendCommand(self.child, self.host.password, expect)
+            self.child.interact()
+        return self.child
+
+    def runRemote(self,command):
         loginCmd = 'ssh -o ServerAliveInterval=60 ' + self.host.user + '@' + self.host.host + ' -p ' + self.host.port
         self.child = pexpect.spawn(loginCmd)
         ret = self.child.expect([pexpect.TIMEOUT, 'Are you sure you want to continue connecting', '[p]assword:'])
