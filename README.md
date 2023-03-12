@@ -11,10 +11,11 @@ pip install pexpect
 
 2.保存XTools到
 /Users/xxxx/tools/XTools
-$ cd /Users/xxxx/tools/XTools
-$ chmod +x xrun
-$ chmod +x xscp
-$ chmod +x xssh
+
+- $ cd /Users/xxxx/tools/XTools
+- $ chmod +x xrun
+- $ chmod +x xscp
+- $ chmod +x xssh
 
 3.修改~/.bash_profile 增加
 ```shell
