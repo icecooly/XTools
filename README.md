@@ -26,4 +26,23 @@ dev		131.x.x.x	root		111111		22
 prd		132.x.x.x	root		111111		22
 ```
 
-5.自动登录xssh dev,就这么简单
+5.自动登录
+```
+xssh dev
+```
+
+6.拷贝本地文件到远程服务器/tmp目录
+```
+xscp a.txt dev:/tmp/
+```
+
+7.从远程服务器拷贝文件到本地
+```
+xscp dev:/tmp/a.txt /tmp
+```
+
+8.在远程服务器执行shell命令，并打印结果
+```
+xrun dev "ls -lrt /tmp"
+xrun dev "md5sum /tmp/a.txt"
+```
