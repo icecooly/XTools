@@ -14,7 +14,7 @@ def main():
     alias = sys.argv[1];
     host = getHostByAlias(alias)
     client=XClient(host)
-    client.run(sys.argv[2])
+    client.runRemote(sys.argv[2])
 
 if __name__ == '__main__':
     main()
