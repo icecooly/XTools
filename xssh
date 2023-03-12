@@ -1,0 +1,20 @@
+#!/usr/bin/env python
+#-*-coding:utf-8-*-
+
+import sys
+from XClient import *
+from XComm import *
+
+def main():
+    if len(sys.argv)!= 2:
+        logInfo("Usage:xssh hostAlias eg:xssh dev")
+        printHosts()
+        sys.exit(-1)
+    #
+    alias = sys.argv[1];
+    host = getHostByAlias(alias)
+    client=XClient(host)
+    client.login()
+
+if __name__ == '__main__':
+    main()

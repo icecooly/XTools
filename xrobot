@@ -1,0 +1,129 @@
+#!/usr/bin/env python3.6
+#-*-coding:utf-8-*-
+
+import sys
+import pexpect
+from pexpect import pxssh
+
+def sendline(s,cmd,expect=None,timeOut=10):
+    charNum=s.sendline(cmd)
+    print('sendCmd:%s %d' % (cmd,charNum))
+    ret=-1
+    if expect != None:
+        expect.insert(0,pexpect.TIMEOUT)
+        ret=s.expect(expect,timeout=timeOut)
+        print("command %s finished expect:%s ret:%d" % (cmd,expect,ret))
+        if ret == 0:#timeout
+            print('expect timeout')
+            print(s.before)
+            sys.exit(-1)
+        return ret
+    s.prompt()
+    print(s.before)
+    print('command %s finished'%cmd)
+    return ret
+
+def mountDisk(s):
+    ret=sendline(s,"fdisk -l |grep Disk |grep '/dev/' |wc -l | sed 's/^/count&/g'",['count1', 'count2', 'count3'])
+    if ret != 2:
+        return True
+    ret=sendline(s,'fdisk -l',['Disk identifier: 0x00000000','dev/vdb1'])
+    if ret == 1:
+        ret = sendline(s, "fdisk /dev/vdb", ['m for help'])
+        ret = sendline(s, 'n', ['Command action']);
+        ret = sendline(s, 'p', ['Partition number']);
+        ret = sendline(s, '1', ['First cylinder']);
+        ret = sendline(s, '\n', ['Last cylinder']);
+        ret = sendline(s, '\n', ['m for help']);
+        ret = sendline(s, 'wq')
+        s.prompt()
+        print("fdisk /dev/vdb success")
+    #
+    ret=sendline(s,'mkfs.ext3 /dev/vdb1',['This filesystem will be automatically','will not make a filesystem here'])
+    # s.sendline('df')
+    ret=sendline(s,'grep /dev/vdb1 /etc/fstab  |wc -l |sed "s/^/count&/g"',['count0','count1'])
+    if ret == 1:#0
+        sendline(s,"echo '/dev/vdb1  /home ext3    defaults    0  0' >> /etc/fstab")
+        s.prompt()
+        print("echo success")
+    sendline(s,'mount -a')
+
+def addUserAppadmin(s,password):
+    ret=sendline(s,'cut -d : -f 1 /etc/passwd |grep appadmin |wc -l | sed "s/^/count&/g"',['count0' , 'count1'])
+    if ret == 1:
+        sendline(s,'useradd appadmin')
+        sendline(s,'passwd appadmin',['New password'])
+        sendline(s,password,['Retype'])
+        sendline(s, password)
+        print('add user appadmin success')
+
+def installHaproxy(s):
+    ret=sendline(s,'which haproxy |wc -l | sed "s/^/count&/g"',['count0' , 'count1'])
+    if ret == 2:
+        return
+    sendline(s,'yum -y install haproxy')
+    sendline(s,'chmod u+s /usr/sbin/haproxy')
+
+def installMysql(s):
+    ret=sendline(s,'ls /etc/init.d/mysqld |wc -l | sed "s/^/count&/g"',['count0' , 'count1'])
+    if ret == 2:
+        return
+    sendline(s, 'rpm -qa |grep -i mysql |xargs rpm -e --nodeps')
+    sendline(s, 'cd /tpm;wget http://repo.mysql.com/mysql-community-release-el6-5.noarch.rpm')
+    sendline(s, 'rpm -ivh mysql-community-release-el6-5.noarch.rpm')
+    sendline(s, 'yum repolist all | grep mysql')
+    sendline(s, 'yum install mysql-community-server -y',['Complete!'],60*60)
+    sendline(s, 'chkconfig --list | grep mysqld')
+    sendline(s, 'chkconfig mysqld on')
+
+def setupMysql(s,rootPassword):
+    sendline(s, '/etc/init.d/mysqld restart')
+    sendline(s, 'mysql_secure_installation', ['Enter current password'])
+    ret=sendline(s, '\n', ['Set root password','Access denied for user'])
+    if ret==2:
+        sendline(s,rootPassword,['Change the root password'])
+        sendline(s, 'n', ['Remove anonymous users'])
+    if ret==1:
+        sendline(s, 'y', ['New password'])
+        sendline(s, rootPassword, ['Re-enter new password'])
+        ret=sendline(s, rootPassword, ['Remove anonymous users','passwords do not match'])
+        if ret==2:
+            sendline(s, rootPassword, ['Remove anonymous users'])
+    sendline(s, 'y', ['Disallow root login remotely'])
+    sendline(s, 'n', ['Remove test database and access to it'])
+    sendline(s, 'y', ['Reload privilege tables now'])
+    sendline(s, 'y')
+
+def setupBashProfile(s):
+    config = """\'
+LSCOLORS=gxfxcxdxbxegedabagacad\n
+export LSCOLORS\n
+####\n
+export export LANG=en_US.UTF-8\n
+export JAVA_HOME=/home/appadmin/jdk\n
+export PATH=$PATH:$JAVA_HOME/bin:/home/appadmin/ant/bin\n
+#\n
+alias ls=\"ls --color\"\n
+alias ll=\"ls -al --color\"\n
+# Source global definitions\n
+if [ -f /etc/bashrc ]; then\n
+    . /etc/bashrc\n
+fi\n\'"""
+    sendline(s,'echo '+config+' > /home/appadmin/.bash_profile')
+
+
+def main():
+    s = pxssh.pxssh(encoding='utf8',timeout=None,maxread=1)
+    s.login(server='x.x.x.x', username='root', password='xxxxx', port=22)
+    sendline(s,'ls -lrt') #for test
+    mountDisk(s)
+    addUserAppadmin(s,'Testtest!@#456')
+    installHaproxy(s)
+    installMysql(s)
+    setupMysql(s,'Testtest!@#456')
+    setupBashProfile(s)
+    s.logout()
+
+if __name__ == '__main__':
+    main()
+

@@ -1,0 +1,3 @@
+#alias ip/host	user	password	port	
+dev		131.x.x.x	root		111111		22
+prd		132.x.x.x	root		111111		22

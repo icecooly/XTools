@@ -1,0 +1,47 @@
+#!/usr/bin/env python
+#-*-coding:utf-8-*-
+
+import sys
+import pexpect
+from XComm import *
+from XClient import *
+
+def copyToRemote(localFile,remote):
+    (hostAlias, remoteFilePath) = remote.split(':')
+    host=getHostByAlias(hostAlias)
+    client=XClient(host)
+    command='scp -r -P %s %s %s@%s:%s'%(host.port,localFile,host.user,host.host,remoteFilePath)
+    client.run(command,pexpect.EOF)
+    logDebug('SUCCESS %s'%command)
+
+def copyFromRemote(remote,localFile):
+    (hostAlias, remoteFilePath) = remote.split(':')
+    host = getHostByAlias(hostAlias)
+    client = XClient(host)
+    command = 'scp -r -P %s %s@%s:%s %s' % (host.port,host.user,host.host, remoteFilePath,localFile)
+    client.run(command,pexpect.EOF)
+    logInfo('SUCCESS %s'%command)
+
+def printUsage():
+    logInfo("Usage:")
+    logInfo("1:xscp localFile hostAlias:remoteFilePath eg:xscp /tmp/a.txt dev:/tmp/")
+    logInfo("2:xscp hostAlias:remoteFile localFilePath eg:xscp dev:/tmp/a.txt /tmp/")
+
+def main():
+    if len(sys.argv)!= 3:
+        printUsage()
+        sys.exit(-1)
+
+    arg1=sys.argv[1]
+    arg2=sys.argv[2]
+    if arg1.find(':')==-1 and arg2.find(':')==-1:
+        printUsage()
+        sys.exit(-1)
+    #
+    if arg1.find(":")==-1:
+        copyToRemote(arg1, arg2)
+    else:
+        copyFromRemote(arg1, arg2)
+
+if __name__ == '__main__':
+    main()
